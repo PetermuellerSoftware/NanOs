@@ -1,0 +1,10 @@
+#Set project directory
+PROJDIR := $(realpath $(CURDIR)/.. )
+SOURCEDIR := $(PROJDIR)/src
+BUILDDIR := $(PROJDIR)/build
+
+CROSS := $(realpath $(HOME)/opt/cross/bin)
+
+ASM := $(CROSS)/i686-elf-as
+CC := $(CROSS)/i686-elf-gcc
+CXX := $(CROSS)/i686-elf-g++
