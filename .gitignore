@@ -1,0 +1,5 @@
+
+#CodeLite Project Files
+.codelite
+*.workspace
+*.project

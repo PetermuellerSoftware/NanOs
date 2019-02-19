@@ -1,0 +1,9 @@
+cd src
+
+cmake -j8
+
+qemu-system-i386 -kernel myos.bin
+
+cd ..
+
+
