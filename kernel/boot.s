@@ -35,7 +35,10 @@ undefined behavior.
 stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
- 
+  
+gdtr:
+    .int 0
+    .long 0
 /*
 The linker script specifies _start as the entry point to the kernel and the
 bootloader will jump to this position once the kernel has been loaded. It
@@ -58,7 +61,7 @@ _start:
 	machine.
 	*/
  
-	/*
+    /*
 	To set up a stack, we set the esp register to point to the top of the
 	stack (as it grows downwards on x86 systems). This is necessarily done
 	in assembly as languages such as C cannot function without a stack.
@@ -75,7 +78,9 @@ _start:
 	C++ features such as global constructors and exceptions will require
 	runtime support to work as well.
 	*/
- 
+
+    call kernel_init_gdt
+
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
 	aligned at the time of the call instruction (which afterwards pushes
@@ -107,3 +112,26 @@ Set the size of the _start symbol to the current location '.' minus its start.
 This is useful when debugging or when you implement call tracing.
 */
 .size _start, . - _start
+
+/*
+    c callable function to set the gdr
+    needs a pointer to the gdtr struct
+ */
+ .global _flush_gdr
+_flush_gdr:
+    mov 4(%esp), %eax  /* Get the pointer to the GDT, passed as a parameter. */
+    lgdt (%eax)        /* Load the new GDT pointer */
+
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+    mov %ax, %ss
+
+    mov $0x08, %ax
+    jmp $0x08, $flush
+flush:
+
+    ret
+.size _flush_gdr, . - _flush_gdr

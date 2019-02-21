@@ -11,12 +11,16 @@
 
 #include "vga.h"
 
-extern "C"
+vga vga;
+
+extern "C"  
 void kernel_main(void) 
 {
 	/* Initialize terminal interface */
-	terminal_initialize();
+	vga.initialize();
  
 	/* Newline support is left as an exercise. */
-	terminal_writestring("Hello, kernel World!\n");
+	vga.writestring("NanOs is starting!\n");
+    vga.writestring("--------------------\n");
+    vga.writestring("\n");
 }
