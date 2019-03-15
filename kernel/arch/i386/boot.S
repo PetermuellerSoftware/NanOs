@@ -35,7 +35,14 @@ undefined behavior.
 stack_bottom:
 .skip 16384 # 16 KiB
 stack_top:
- 
+
+.global multiboot_information
+multiboot_information:
+    .long 0
+
+gdtr:
+    .int 0
+    .long 0
 /*
 The linker script specifies _start as the entry point to the kernel and the
 bootloader will jump to this position once the kernel has been loaded. It
@@ -57,13 +64,23 @@ _start:
 	itself. It has absolute and complete power over the
 	machine.
 	*/
+    
+    /* we got a whole bunch of information in the multiboot information structure
+       which adress is located in ebx
+    */
+    mov %ebx, multiboot_information
  
-	/*
+    /*
 	To set up a stack, we set the esp register to point to the top of the
 	stack (as it grows downwards on x86 systems). This is necessarily done
 	in assembly as languages such as C cannot function without a stack.
 	*/
 	mov $stack_top, %esp
+ 
+    /* 
+    Call the global constructors
+    */
+    call _init
  
 	/*
 	This is a good place to initialize crucial processor state before the
@@ -75,7 +92,9 @@ _start:
 	C++ features such as global constructors and exceptions will require
 	runtime support to work as well.
 	*/
- 
+       
+    call kernel_init
+
 	/*
 	Enter the high-level kernel. The ABI requires the stack is 16-byte
 	aligned at the time of the call instruction (which afterwards pushes

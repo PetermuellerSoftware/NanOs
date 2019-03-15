@@ -3,3 +3,6 @@
 .codelite
 *.workspace
 *.project
+
+#
+.DS_Store
