@@ -1,46 +1,85 @@
-include ../Makefile.rules
+DEFAULT_HOST = $(shell ../default-host.sh)
+HOST?=$(DEFAULT_HOST)
+HOSTARCH = $(shell ../target-triplet-to-arch.sh $(HOST))
+ 
+CFLAGS?=-O2 -g
+CPPFLAGS?=
+LDFLAGS?=
+LIBS?=
 
-OBJDIR = $(BUILDDIR)/kernel/
-DEPDIR = $(BUILDDIR)/kernel/
+DESTDIR?=
+PREFIX?=/usr/local
+EXEC_PREFIX?=$(PREFIX)
+BOOTDIR?=$(EXEC_PREFIX)/boot
+INCLUDEDIR?=$(PREFIX)/include
+ 
+CFLAGS:=$(CFLAGS) -ffreestanding -Wall -Wextra
+CPPFLAGS:=$(CPPFLAGS) -D__is_kernel -Iinclude
+LDFLAGS:=$(LDFLAGS)
+LIBS:=$(LIBS) -nostdlib -lk -lgcc
+ 
+ARCHDIR=arch/$(HOSTARCH)
+ 
+include $(ARCHDIR)/make.config
 
-CFLAGS = -std=c11 -ffreestanding -O2 -Wall -Wextra
-CXXFLAGS = -std=c++14 -ffreestanding -O2 -Wall -Wextra
-ASMFLAGS = 
+CFLAGS:=$(CFLAGS) $(KERNEL_ARCH_CFLAGS)
+CPPFLAGS:=$(CPPFLAGS) $(KERNEL_ARCH_CPPFLAGS)
+LDFLAGS:=$(LDFLAGS) $(KERNEL_ARCH_LDFLAGS)
+LIBS:=$(LIBS) $(KERNEL_ARCH_LIBS)
+ 
+KERNEL_OBJS=\
+$(KERNEL_ARCH_OBJS) \
+kernel/kernel.o \
+kernel/kernel_init.o \
+kernel/log.o \
 
-CFILES = $(wildcard *.c)
-CXXFILES = $(wildcard *.cpp)
-ASMFILES = $(wildcard *.s)
-
-COBJ = $(patsubst %.c,$(OBJDIR)/%.o, $(CFILES))
-CXXOBJ = $(patsubst %.cpp, $(OBJDIR)/%.o, $(CXXFILES)) 
-ASMOBJ = $(patsubst %.s,$(OBJDIR)/%.o, $(ASMFILES))
-
-VERBOSE=false
-
-.PHONY: all
-all: init kernel
-
--include $(COBJ:.o=.d)
--include $(CXXOBJ:.o=.d)
-
-kernel: $(COBJ) $(CXXOBJ) $(ASMOBJ)
-	$(CXX) -T linker.ld -o $(BUILDDIR)/kernel.bin -ffreestanding -O2 -nostdlib -lgcc $(COBJ) $(CXXOBJ) $(ASMOBJ) 
-
-.PHONY: init
-init:
-	mkdir -p $(OBJDIR)
-
-dep: 
-
-$(OBJDIR)/%.o:%.s
-	$(ASM) $(ASMFLAGS) $< -o $@
-
-$(OBJDIR)/%.o:%.c
-	$(CC) -S $(CFLAGS) $< -o $(OBJDIR)/$*.s
-	$(CC) -c $(CFLAGS) $(OBJDIR)/$*.s -o $@
-	$(CC) -MM $(CFLAGS) $< > $(OBJDIR)/$*.d
-
-$(OBJDIR)/%.o:%.cpp
-	$(CXX) -S $(CXXFLAGS) $< -o $(OBJDIR)/$*.s
-	$(CXX) -c $(CXXFLAGS) $(OBJDIR)/$*.s -o $@
-	$(CXX) -MM $(CXXFLAGS) $< > $(OBJDIR)/$*.d
+OBJS=\
+$(ARCHDIR)/crti.o \
+$(ARCHDIR)/crtbegin.o \
+$(KERNEL_OBJS) \
+$(ARCHDIR)/crtend.o \
+$(ARCHDIR)/crtn.o \
+ 
+LINK_LIST=\
+$(LDFLAGS) \
+$(ARCHDIR)/crti.o \
+$(ARCHDIR)/crtbegin.o \
+$(KERNEL_OBJS) \
+$(LIBS) \
+$(ARCHDIR)/crtend.o \
+$(ARCHDIR)/crtn.o \
+ 
+.PHONY: all clean install install-headers install-kernel
+.SUFFIXES: .o .c .S
+ 
+all: nanos.kernel
+ 
+nanos.kernel: $(OBJS) $(ARCHDIR)/linker.ld
+	$(CC) -T $(ARCHDIR)/linker.ld -o $@ $(CFLAGS) $(LINK_LIST)
+	grub-file --is-x86-multiboot nanos.kernel
+ 
+$(ARCHDIR)/crtbegin.o $(ARCHDIR)/crtend.o:
+	OBJ=`$(CC) $(CFLAGS) $(LDFLAGS) -print-file-name=$(@F)` && cp "$$OBJ" $@
+ 
+.c.o:
+	$(CC) -MD -c $< -o $@ -std=gnu11 $(CFLAGS) $(CPPFLAGS)
+ 
+.S.o:
+	$(CC) -MD -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
+ 
+clean:
+	rm -f myos.kernel
+	rm -f $(OBJS) *.o */*.o */*/*.o
+	rm -f $(OBJS:.o=.d) *.d */*.d */*/*.d
+ 
+install: install-headers install-kernel
+ 
+install-headers:
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)
+	cp -R -p include/. $(DESTDIR)$(INCLUDEDIR)/.
+ 
+install-kernel: nanos.kernel
+	mkdir -p $(DESTDIR)$(BOOTDIR)
+	cp nanos.kernel $(DESTDIR)$(BOOTDIR)
+ 
+-include $(OBJS:.o=.d)

@@ -4,5 +4,5 @@
 *.workspace
 *.project
 
-#exclude all builds
-build*
+#
+.DS_Store
