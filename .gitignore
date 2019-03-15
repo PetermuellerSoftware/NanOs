@@ -12,5 +12,9 @@ log/
 *.workspace
 *.project
 
+#gcc generated files
+*.o
+*.d
+
 #
 .DS_Store

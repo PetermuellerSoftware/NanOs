@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <kernel/baseIO.h>
 #include <kernel/tty.h>
 
 #include "vga.h"
@@ -47,6 +48,16 @@ static uint8_t terminal_color;
 static uint16_t* terminal_buffer;
 
  
+void terminal_update_cursor(int x, int y)
+{
+	uint16_t pos = y * VGA_WIDTH + x;
+ 
+	outb(0x3D4, 0x0F);
+	outb(0x3D5, (uint8_t) (pos & 0xFF));
+	outb(0x3D4, 0x0E);
+	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+}
+
 
 void terminal_initialize(void) {
     terminal_row = 0;
@@ -99,7 +110,8 @@ void terminal_forward()
         }     
 }
 
-void terminal_putchar(char c) {
+
+void _terminal_putchar(char c) {
     unsigned const char uc = (unsigned const char) c;
     switch (uc) {
     case '\n':
@@ -110,22 +122,21 @@ void terminal_putchar(char c) {
         terminal_putentryat(uc, terminal_color, terminal_column, terminal_row);
         terminal_forward();           
     } 
-    /*
-    unsigned char uc = c;
-    terminal_putentryat(uc, terminal_color, terminal_column, terminal_row);
-    if (++terminal_column == VGA_WIDTH) {
-        terminal_column = 0;
-        if (++terminal_row == VGA_HEIGHT)
-            terminal_row = 0;
-    }*/
 }
- 
+
+void terminal_putchar(char c) {
+    _terminal_putchar(c);
+    terminal_update_cursor(terminal_column, terminal_row);
+}
+
 void terminal_write(const char* data, size_t size) {
     for (size_t i = 0; i < size; i++)
-        terminal_putchar(data[i]);
+        _terminal_putchar(data[i]);
+    terminal_update_cursor(terminal_column, terminal_row);
 }
 
 
 void terminal_writestring(const char* data) {
     terminal_write(data, strlen(data));
+    terminal_update_cursor(terminal_column, terminal_row);
 }
