@@ -1,4 +1,12 @@
 
+#generated folders during creation or run
+sysroot/
+isodir/
+log/
+
+#created iso with the OS
+*.iso
+
 #CodeLite Project Files
 .codelite
 *.workspace
