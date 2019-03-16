@@ -39,11 +39,15 @@
 //	extern "C" 
 void kernel_main(void) 
 {    
-    terminal_initialize();
-    serial_initialize( SERIAL_BAUD_RATE_57600);
-
     // give the fist sign of live to the user
     log (LOG_TYPE_INFO, "NanOs is starting!\n\n");
-            
+
+    
+    
+    
+    while(1)
+        asm volatile ("hlt");
+    
+    log (LOG_TYPE_ERROR, "Never should come to here, kernel leaving main");
 }
 

@@ -39,6 +39,7 @@
 .type _flush_gdr, @function
  
 _flush_gdr:
+    cli
     mov 4(%esp), %eax  /* Get the pointer to the GDT, passed as a parameter. */
     lgdt (%eax)        /* Load the new GDT pointer */
 
@@ -52,6 +53,16 @@ _flush_gdr:
     #mov $0x08, %ax
     jmp $0x08, $flush
 flush:
+    ret
+    
+.global _flush_idt
+.type _flush_idt, @function
+
+_flush_idt:
+    cli
+    mov 4(%esp), %eax  /* Get the pointer to the IDT, passed as a parameter. */
+    lidt (%eax)        /* Load the new IDT pointer */
+    sti
 
     ret
 .size _flush_gdr, . - _flush_gdr

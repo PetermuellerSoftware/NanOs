@@ -35,6 +35,7 @@
 #include <kernel/tty.h>
 #include <kernel/serial.h>
 
+#include <arch/i386/vga.h>
 
 void logf(int level, const char* format, ...) {
     char logmsg[255];
@@ -54,17 +55,29 @@ void logf(int level, const char* format, ...) {
 void log(int level, const char* msg) {
     char log_entry[255];
     char clevel;
-    terminal_writestring(msg);
+    uint8_t color = terminal_getcolor();
     
     switch(level) {
         case LOG_TYPE_CRITICAL:
-            clevel='C'; break;
+            clevel='C'; 
+            terminal_setcolor(
+                vga_entry_color( VGA_COLOR_LIGHT_MAGENTA, VGA_COLOR_BLACK ));
+            break;
         case LOG_TYPE_ERROR:
-            clevel='E'; break;
+            clevel='E';
+            terminal_setcolor(
+                vga_entry_color( VGA_COLOR_RED, VGA_COLOR_BLACK ));
+            break;
         case LOG_TYPE_WARNING:
-            clevel='W'; break;
+            clevel='W'; 
+            terminal_setcolor(
+                vga_entry_color( VGA_COLOR_LIGHT_BROWN , VGA_COLOR_BLACK ));
+            break;
         case LOG_TYPE_INFO:
-            clevel='I'; break;
+            clevel='I'; 
+            terminal_setcolor(
+                vga_entry_color( VGA_COLOR_WHITE, VGA_COLOR_BLACK ));
+            break;            
         case LOG_TYPE_DEBUG:
             clevel='D'; break;
         case LOG_TYPE_VERBOSE:
@@ -74,5 +87,8 @@ void log(int level, const char* msg) {
         }
     
     snprintf(log_entry, 255, "%c; %s", clevel, msg);
+    terminal_writestring(msg);
+
+    terminal_setcolor(color);
     serial_writestring(log_entry);
 }

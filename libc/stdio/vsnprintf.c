@@ -33,6 +33,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 
 static bool __vsnprintf(char* restrict string, size_t start, size_t n,const char* data, size_t length) {
     
@@ -77,7 +79,7 @@ int vsnprintf(char* restrict string, size_t n, const char* restrict format, va_l
 
         if (*format == 'c') {
             format++;
-            char c = (char) va_arg(parameters, int /* char promotes to int */);
+            char c = (char) va_arg(parameters, int /* char promotes to int */ );
             if (!maxrem) {
                 // TODO: Set errno to EOVERFLOW.
                 return -1;
@@ -94,6 +96,19 @@ int vsnprintf(char* restrict string, size_t n, const char* restrict format, va_l
                 return -1;
             }
             if (!__vsnprintf(string, written, n, str, len))
+                return -1;
+            written += len;
+        } else if (*format == 'd') {
+            format++;
+            const int val = va_arg(parameters, const int);
+            char int_str[12];
+            itoa(val, int_str, 10);
+            size_t len = strlen(int_str);
+            if (maxrem < len) {
+                // TODO: Set errno to EOVERFLOW.
+                return -1;
+            }
+            if (!__vsnprintf(string, written, n, int_str, len))
                 return -1;
             written += len;
         } else {

@@ -33,15 +33,6 @@
 
 #include <stdint.h>
 
-// define PIC ports
-
-#define PIC1 0x20
-#define PIC2 0xA0
-#define PIC1_COMMAND PIC1 
-#define PIC1_DATA PIC1+1
-#define PIC2_COMMAND PIC2 
-#define PIC2_DATA PIC2+1
-
 static inline void outb(uint16_t port, uint8_t val)
 {
     asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );

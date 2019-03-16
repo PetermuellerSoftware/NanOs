@@ -27,26 +27,61 @@
 |**********************************************************************;
 */
 
-#include <stdlib.h>
-#include <stdio.h>
+.global c_isr
+.extern c_isr
 
-#if defined(__is_libk)
-#include <kernel/log.h>
-#endif
+.global isr20
+.global isr21
+.global isr22
+.global isr23
+.global isr24
+.global isr25
+.global isr26
+.global isr27
 
-void abort() {
-#if defined(__is_libk)
+isr20:
+    pushal
+    push $0x0
+    jmp isr_x    
 
-    log ( LOG_TYPE_CRITICAL,  "kernel: panic: abort\n");
-    __asm__ volatile (
-        "cli;"
-        "hlt_abort:;"
-        "hlt;"
-        "jmp hlt_abort;"
-    );
-#else
-    printf ("abort\n");
-    // TODO: sigabort handling
-#endif
-    
-}
+isr21:
+    pushal
+    push $0x1
+    jmp isr_x    
+
+isr22:
+    pushal
+    push $0x2
+    jmp isr_x    
+
+isr23:
+    pushal
+    push $0x3
+    jmp isr_x    
+
+isr24:
+    pushal
+    push $0x4
+    jmp isr_x    
+
+isr25:
+    pushal
+    push $0x5
+    jmp isr_x    
+
+isr26:
+    pushal
+    push $0x6
+    jmp isr_x    
+
+isr27:
+    pushal
+    push $0x7
+    jmp isr_x    
+
+isr_x:
+//    cld
+    call c_isr
+    pop %eax
+    popal
+    iret

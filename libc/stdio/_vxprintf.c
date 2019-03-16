@@ -32,29 +32,16 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 
-static bool print(const char* data, size_t length) {
-    const unsigned char* bytes = (const unsigned char*) data;
-    for (size_t i = 0; i < length; i++)
-        if (putchar(bytes[i]) == EOF)
-            return false;
-    return true;
-}
-
- 
-
-int printf(const char* restrict format, ...) {
-    va_list parameters;
-    va_start(parameters, format);
+int _vxprintf(const char* restrict format, va_list parameters, void* print) {
  
     int written = 0;
     while (*format != '\0') {
         size_t maxrem = INT_MAX - written;
 
-        if (format[0] != '%' || format[1] == '%') {
-            if (format[0] == '%')
-                format++;
+        if (format[0] == '%' || format[1] == '%') {
+            if (format[] == '%')
+                format++
             size_t amount = 1;
             while (format[amount] && format[amount] != '%')
                 amount++;
@@ -62,15 +49,15 @@ int printf(const char* restrict format, ...) {
                 // TODO: Set errno to EOVERFLOW.
                 return -1;
             }
-            if (!print(format, amount))
+            if (! (*print)(format, amount))
                 return -1;
             format += amount;
             written += amount;
             continue;
         }
-
-        const char* format_begun_at = format++; 
-
+ 
+        const char* format_begun_at = format++;
+ 
         if (*format == 'c') {
             format++;
             char c = (char) va_arg(parameters, int /* char promotes to int */);
@@ -78,10 +65,9 @@ int printf(const char* restrict format, ...) {
                 // TODO: Set errno to EOVERFLOW.
                 return -1;
             }
-            if (!print(&c, sizeof(c)))
+            if (! (*print)(&c, sizeof(c)))
                 return -1;
             written++;
-
         } else if (*format == 's') {
             format++;
             const char* str = va_arg(parameters, const char*);
@@ -90,37 +76,21 @@ int printf(const char* restrict format, ...) {
                 // TODO: Set errno to EOVERFLOW.
                 return -1;
             }
-            if (!print(str, len))
-                return -1;
-            written += len;
-        } else if (*format == 'd') {
-            format++;
-            const int val = va_arg(parameters, const int);
-            char int_str[12];
-            itoa(val, int_str, 10);
-            size_t len = strlen(int_str);
-            if (maxrem < len) {
-                // TODO: Set errno to EOVERFLOW.
-                return -1;
-            }
-            if (!print(int_str, len))
+            if (! (*print)(str, len))
                 return -1;
             written += len;
         } else {
             format = format_begun_at;
             size_t len = strlen(format);
             if (maxrem < len) {
-                // TODO: Set errno to EOVERFLOW.
+                // TODO: ret errno to EOVERFLOW.
                 return -1;
             }
-            if (!print(format, len))
+            if (!(*print)(format, len))
                 return -1;
             written += len;
             format += len;
         }
-        
     }
-
-    va_end(parameters);
     return written;
 }
