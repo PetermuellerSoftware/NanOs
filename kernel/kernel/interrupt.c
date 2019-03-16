@@ -60,13 +60,35 @@
 #define PIC2_COMMAND PIC2 
 #define PIC2_DATA PIC2+1
 
-extern void _flush_idt( xdt_ptr_t* );
+#define PIC_EOI 0x20
 
+extern void _flush_idt( xdt_ptr_t* );
 
 // space to store the idt in
 uint8_t idt[256*8];
 
 xdt_ptr_t idtr;
+
+struct cpu_state {
+    // Von Hand gesicherte Register
+    uint32_t   eax;
+    uint32_t   ebx;
+    uint32_t   ecx;
+    uint32_t   edx;
+    uint32_t   esi;
+    uint32_t   edi;
+    uint32_t   ebp;
+
+    uint32_t   intr;
+    uint32_t   error;
+
+    // Von der CPU gesichert
+    uint32_t   eip;
+    uint32_t   cs;
+    uint32_t   eflags;
+    uint32_t   esp;
+    uint32_t   ss;
+};
 
 struct IDTDescr {
    uint16_t offset_1; // offset bits 0..15
@@ -112,6 +134,7 @@ void PIC_remap(int offset1, int offset2)
     outb(PIC2_DATA, a2);
 }
 
+
 void IDT_createEntry( uint8_t* idt_entry, void* interrupt_service_routine)
 {   
     IDTDescr_t *entry = (IDTDescr_t*) idt_entry;
@@ -123,14 +146,45 @@ void IDT_createEntry( uint8_t* idt_entry, void* interrupt_service_routine)
     entry->zero = 0x00;
 }
 
-extern void* isr20;
-extern void* isr21;
-extern void* isr22;
-extern void* isr23;
-extern void* isr24;
-extern void* isr25;
-extern void* isr26;
-extern void* isr27;
+extern void* intr_stub_0;
+extern void* intr_stub_1;
+extern void* intr_stub_2;
+extern void* intr_stub_3;
+extern void* intr_stub_4;
+extern void* intr_stub_5;
+extern void* intr_stub_6;
+extern void* intr_stub_7;
+extern void* intr_stub_8;
+extern void* intr_stub_9;
+extern void* intr_stub_10;
+extern void* intr_stub_11;
+extern void* intr_stub_12;
+extern void* intr_stub_13;
+extern void* intr_stub_14;
+extern void* intr_stub_15;
+extern void* intr_stub_16;
+extern void* intr_stub_17;
+extern void* intr_stub_18;
+
+extern void* intr_stub_32;
+extern void* intr_stub_33;
+extern void* intr_stub_34;
+extern void* intr_stub_35;
+extern void* intr_stub_36;
+extern void* intr_stub_37;
+extern void* intr_stub_38;
+extern void* intr_stub_39;
+extern void* intr_stub_40;
+extern void* intr_stub_41;
+extern void* intr_stub_42;
+extern void* intr_stub_43;
+extern void* intr_stub_44;
+extern void* intr_stub_45;
+extern void* intr_stub_46;
+extern void* intr_stub_47;
+
+extern void* intr_stub_48;
+
 
 void kernel_init_idt()
 {    
@@ -141,36 +195,65 @@ void kernel_init_idt()
     log( LOG_TYPE_DEBUG, "remapping PIC\n");
     PIC_remap( 0x20, 0x28);
 
-    for (int i=0; i < 0x20; i++)
-        IDT_createEntry( idt + (i << 3), &isr20);        
- 
-    IDT_createEntry( idt + (0x20 << 3), &isr20);
-    IDT_createEntry( idt + (0x21 << 3), &isr21);
-    IDT_createEntry( idt + (0x22 << 3), &isr22);
-    IDT_createEntry( idt + (0x23 << 3), &isr23);
-    IDT_createEntry( idt + (0x24 << 3), &isr24);
-    IDT_createEntry( idt + (0x25 << 3), &isr25);
-    IDT_createEntry( idt + (0x26 << 3), &isr22);
-    IDT_createEntry( idt + (0x27 << 3), &isr27);
-    
+    IDT_createEntry( idt + (0x00 << 3), &intr_stub_0);
+    IDT_createEntry( idt + (0x01 << 3), &intr_stub_1);
+    IDT_createEntry( idt + (0x02 << 3), &intr_stub_2);
+    IDT_createEntry( idt + (0x03 << 3), &intr_stub_3);
+    IDT_createEntry( idt + (0x04 << 3), &intr_stub_4);
+    IDT_createEntry( idt + (0x05 << 3), &intr_stub_5);
+    IDT_createEntry( idt + (0x06 << 3), &intr_stub_6);
+    IDT_createEntry( idt + (0x07 << 3), &intr_stub_7);
+    IDT_createEntry( idt + (0x08 << 3), &intr_stub_8);
+    IDT_createEntry( idt + (0x09 << 3), &intr_stub_9);
+    IDT_createEntry( idt + (0x0A << 3), &intr_stub_10);
+    IDT_createEntry( idt + (0x0B << 3), &intr_stub_11);
+    IDT_createEntry( idt + (0x0C << 3), &intr_stub_12);
+    IDT_createEntry( idt + (0x0D << 3), &intr_stub_13);
+    IDT_createEntry( idt + (0x0E << 3), &intr_stub_14);
+    IDT_createEntry( idt + (0x0F << 3), &intr_stub_15);
+    IDT_createEntry( idt + (0x10 << 3), &intr_stub_16);
+    IDT_createEntry( idt + (0x11 << 3), &intr_stub_17);
+    IDT_createEntry( idt + (0x12 << 3), &intr_stub_18);
+
+    IDT_createEntry( idt + (0x20 << 3), &intr_stub_32);
+    IDT_createEntry( idt + (0x21 << 3), &intr_stub_33);
+    IDT_createEntry( idt + (0x22 << 3), &intr_stub_34);
+    IDT_createEntry( idt + (0x23 << 3), &intr_stub_35);
+    IDT_createEntry( idt + (0x24 << 3), &intr_stub_36);
+    IDT_createEntry( idt + (0x25 << 3), &intr_stub_37);
+    IDT_createEntry( idt + (0x26 << 3), &intr_stub_38);
+    IDT_createEntry( idt + (0x27 << 3), &intr_stub_39);
+    IDT_createEntry( idt + (0x28 << 3), &intr_stub_40);
+    IDT_createEntry( idt + (0x29 << 3), &intr_stub_41);
+    IDT_createEntry( idt + (0x2A << 3), &intr_stub_42);
+    IDT_createEntry( idt + (0x2B << 3), &intr_stub_43);
+    IDT_createEntry( idt + (0x2C << 3), &intr_stub_44);
+    IDT_createEntry( idt + (0x2D << 3), &intr_stub_45);
+    IDT_createEntry( idt + (0x2E << 3), &intr_stub_46);
+    IDT_createEntry( idt + (0x2F << 3), &intr_stub_47);
+
+    IDT_createEntry( idt + (0x30 << 3), &intr_stub_48);
+
     idtr.base = idt;
     idtr.limit = sizeof(idt);
 
-// nothing but keyboard right now
-    outb(PIC1_DATA, !0x02) ;
-    outb(PIC2_DATA, !0x00);
+    outb(PIC1_DATA, 0xFC ) ;
+    outb(PIC2_DATA, 0xFF);
 
     log ( LOG_TYPE_VERBOSE, "IDT prepared\n");
     _flush_idt( &idtr);
     log ( LOG_TYPE_INFO, "IDT installed\n");
 }
 
-void c_isr( uint8_t intr ) {
-    logf( LOG_TYPE_VERBOSE, "interrupt %d raised", intr);
+void handle_interrupt ( struct cpu_state* cpu) {
+    if (cpu->intr <= 0x1F) {
+        logf ( LOG_TYPE_CRITICAL, "CPU Exception %d\n", cpu->intr);
+    } else {
+//        logf ( LOG_TYPE_INFO, "Interrupt %d", cpu->intr);   
         
-    if (intr>=8)
-        outb(PIC2_COMMAND, 20);
-    outb(PIC1_COMMAND, 20);
+        if (cpu->intr>=0x28)
+            outb(PIC2_COMMAND, PIC_EOI);         
+        outb(PIC1_COMMAND, PIC_EOI);                
+    }
 }
-
 

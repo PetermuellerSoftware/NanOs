@@ -111,6 +111,19 @@ int vsnprintf(char* restrict string, size_t n, const char* restrict format, va_l
             if (!__vsnprintf(string, written, n, int_str, len))
                 return -1;
             written += len;
+        } else if ((*format == 'x')  || (*format == 'X')) {
+            format++;
+            const int val = va_arg(parameters, const int);
+            char int_str[12];
+            itoa(val, int_str, 16);
+            size_t len = strlen(int_str);
+            if (maxrem < len) {
+                // TODO: Set errno to EOVERFLOW.
+                return -1;
+            }
+            if (!__vsnprintf(string, written, n, int_str, len))
+                return -1;
+            written += len;
         } else {
             format = format_begun_at;
             size_t len = strlen(format);

@@ -30,6 +30,23 @@
 .global c_isr
 .extern c_isr
 
+.global isr00
+.global isr01
+.global isr02
+.global isr03
+.global isr04
+.global isr05
+.global isr06
+.global isr07
+.global isr08
+.global isr09
+.global isr0A
+.global isr0B
+.global isr0C
+.global isr0D
+.global isr0E
+.global isr0F
+
 .global isr20
 .global isr21
 .global isr22
@@ -38,50 +55,94 @@
 .global isr25
 .global isr26
 .global isr27
+.global isr28
+.global isr29
+.global isr2A
+.global isr2B
+.global isr2C
+.global isr2D
+.global isr2E
+.global isr2F
+.global isr30
 
-isr20:
-    pushal
-    push $0x0
-    jmp isr_x    
+.macro intr_stub nr
+.global intr_stub_\nr
+intr_stub_\nr:
+    pushl $0
+    pushl $\nr
+    jmp intr_common_handler
+.endm
 
-isr21:
-    pushal
-    push $0x1
-    jmp isr_x    
+.macro intr_stub_error_code nr
+.global intr_stub_\nr
+intr_stub_\nr:
+    pushl $\nr
+    jmp intr_common_handler
+.endm
 
-isr22:
-    pushal
-    push $0x2
-    jmp isr_x    
+// Exceptions
+intr_stub 0
+intr_stub 1
+intr_stub 2
+intr_stub 3
+intr_stub 4
+intr_stub 5
+intr_stub 6
+intr_stub 7
+intr_stub_error_code 8
+intr_stub 9
+intr_stub_error_code 10
+intr_stub_error_code 11
+intr_stub_error_code 12
+intr_stub_error_code 13
+intr_stub_error_code 14
+intr_stub 15
+intr_stub 16
+intr_stub_error_code 17
+intr_stub 18
 
-isr23:
-    pushal
-    push $0x3
-    jmp isr_x    
+intr_stub 32
+intr_stub 33
+intr_stub 34
+intr_stub 35
+intr_stub 36
+intr_stub 37
+intr_stub 38
+intr_stub 39
+intr_stub 40
+intr_stub 41
+intr_stub 42
+intr_stub 43
+intr_stub 44
+intr_stub 45
+intr_stub 46
+intr_stub 47
 
-isr24:
-    pushal
-    push $0x4
-    jmp isr_x    
+intr_stub 48
 
-isr25:
-    pushal
-    push $0x5
-    jmp isr_x    
+.extern handle_interrupt
+intr_common_handler:
 
-isr26:
-    pushal
-    push $0x6
-    jmp isr_x    
-
-isr27:
-    pushal
-    push $0x7
-    jmp isr_x    
-
-isr_x:
-//    cld
-    call c_isr
+    push %ebp
+    push %edi
+    push %esi
+    push %edx
+    push %ecx
+    push %ebx
+    push %eax
+    
+    push %esp
+    call handle_interrupt
+    add $4, %esp
+    
     pop %eax
-    popal
+    pop %ebx
+    pop %ecx
+    pop %edx
+    pop %esi
+    pop %edi
+    pop %ebp
+
+    add $8, %esp  
+    
     iret

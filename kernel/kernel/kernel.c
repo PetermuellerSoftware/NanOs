@@ -42,9 +42,6 @@ void kernel_main(void)
     // give the fist sign of live to the user
     log (LOG_TYPE_INFO, "NanOs is starting!\n\n");
 
-    
-    
-    
     while(1)
         asm volatile ("hlt");
     
