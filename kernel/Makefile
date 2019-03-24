@@ -31,6 +31,7 @@ KERNEL_OBJS=\
 $(KERNEL_ARCH_OBJS) \
 kernel/kernel.o \
 kernel/kernel_init.o \
+kernel/keyboard.o \
 kernel/gdt.o \
 kernel/interrupt.o \
 kernel/isr.o \
@@ -79,9 +80,9 @@ install: install-headers install-kernel
  
 install-headers:
 	mkdir -p $(DESTDIR)$(INCLUDEDIR)
-	mkdir -p $(DESTDIR)$(INCLUDEDIR)/$(ARCHDIR)
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)/arch
 	cp -R -p include/. $(DESTDIR)$(INCLUDEDIR)/.
-	cp -p $(ARCHDIR)/*.h $(DESTDIR)$(INCLUDEDIR)/$(ARCHDIR)
+	cp -R -p $(ARCHDIR)/. $(DESTDIR)$(INCLUDEDIR)/arch/.
  
 install-kernel: nanos.kernel
 	mkdir -p $(DESTDIR)$(BOOTDIR)

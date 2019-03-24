@@ -34,6 +34,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 
 /* reinitialize the PIC controllers, giving them specified vector offsets
    rather than 8h and 70h, as configured by default */
@@ -65,9 +67,11 @@
 extern void _flush_idt( xdt_ptr_t* );
 
 // space to store the idt in
-uint8_t idt[256*8];
+uint8_t idt[50*8];
 
 xdt_ptr_t idtr;
+
+void (*intr_specific_handler[50])();
 
 struct cpu_state {
     // Von Hand gesicherte Register
@@ -188,7 +192,8 @@ extern void* intr_stub_48;
 
 void kernel_init_idt()
 {    
-    memset (idt, 0, 8 * 256);
+    memset (idt, 0, sizeof(idt));
+    memset (intr_specific_handler, 0, sizeof(intr_specific_handler));
     
     log( LOG_TYPE_VERBOSE, "kernel_init_idt entry\n" );
 
@@ -234,26 +239,43 @@ void kernel_init_idt()
 
     IDT_createEntry( idt + (0x30 << 3), &intr_stub_48);
 
-    idtr.base = idt;
+    idtr.base = (uint32_t) idt;
     idtr.limit = sizeof(idt);
 
-    outb(PIC1_DATA, 0xFC ) ;
+    outb(PIC1_DATA, 0xFD ) ;
     outb(PIC2_DATA, 0xFF);
 
-    log ( LOG_TYPE_VERBOSE, "IDT prepared\n");
     _flush_idt( &idtr);
-    log ( LOG_TYPE_INFO, "IDT installed\n");
 }
+
 
 void handle_interrupt ( struct cpu_state* cpu) {
     if (cpu->intr <= 0x1F) {
         logf ( LOG_TYPE_CRITICAL, "CPU Exception %d\n", cpu->intr);
     } else {
-//        logf ( LOG_TYPE_INFO, "Interrupt %d", cpu->intr);   
-        
+        if (intr_specific_handler[cpu->intr]) {
+//            logf ( LOG_TYPE_VERBOSE, "CPU INTR %d special handler called\n", cpu->intr );
+            (*intr_specific_handler[cpu->intr])();
+        } else {
+//            logf ( LOG_TYPE_VERBOSE, "CPU INTR %d withput special handler\n", cpu->intr );
+            }
         if (cpu->intr>=0x28)
             outb(PIC2_COMMAND, PIC_EOI);         
         outb(PIC1_COMMAND, PIC_EOI);                
     }
+}
+
+
+void register_intr_handler( uint8_t intr, void (*handler)() ) {
+    if (intr > 48) {
+        logf ( LOG_TYPE_CRITICAL, "interrupt %d not valid to register\n", intr);
+        abort();
+    }
+    if (intr_specific_handler[intr]) {
+        logf ( LOG_TYPE_CRITICAL, "interrupt %d was registered twice\n", intr);
+        abort();
+    }
+    
+    intr_specific_handler[intr] = handler;
 }
 

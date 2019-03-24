@@ -35,7 +35,7 @@
 #include <kernel/tty.h>
 #include <kernel/serial.h>
 
-#include <arch/i386/vga.h>
+#include <arch/vga.h>
 
 void logf(int level, const char* format, ...) {
     char logmsg[255];

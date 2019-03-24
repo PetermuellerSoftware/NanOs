@@ -27,6 +27,7 @@
 |**********************************************************************;
 */
 
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -133,11 +134,15 @@ void terminal_forward()
 
 void _terminal_putchar(char c) {
     unsigned const char uc = (unsigned const char) c;
+    int col;
     switch (uc) {
     case '\n':
         terminal_nextline(); break;
-//    case '\t':
-        //tab(); break;
+    case '\t':
+        col = (int) ceil (terminal_column / 4.0f);
+        terminal_column = col * 4 - 1;
+        terminal_forward(); // use forward to get eventually newline
+        break;
     default:
         terminal_putentryat(uc, terminal_color, terminal_column, terminal_row);
         terminal_forward();           

@@ -26,41 +26,12 @@
 *
 |**********************************************************************;
 */
+#ifndef KERNEL_INTR_J
+#define KERNEL_INTR_J 1
 
 
-#include <stdio.h>
+#define INTR_BASE 0x20
 
-#include "kernel/baseIO.h"
-#include "kernel/GDT.h"
-#include "kernel/log.h"
-#include "kernel/serial.h"
-#include "kernel/tty.h"
+void register_intr_handler( uint8_t intr, void* handler );
 
-//#include "MemoryController.h"
-
-extern void kernel_init_gdt();
-extern void kernel_init_idt();
-extern void keyboard_init();
-
-void kernel_init()
-{
-    terminal_initialize();
-        
-    // serial not ready yet, so dont use log
-    printf ("terminal initialized\n"); 
-    
-    serial_initialize( SERIAL_BAUD_RATE_57600);
-    log ( LOG_TYPE_INFO, "serial port initialized\n" );
-    
-    // initialize the gdt
-    kernel_init_gdt();
-    log ( LOG_TYPE_INFO, "global descriptor table installed\n" );
-
-    // initialize the idt
-    kernel_init_idt();
-    log ( LOG_TYPE_INFO, "interrupt descriptor table installed\n" );
-    
-    // initialize keyboard driver
-    keyboard_init();
-    log ( LOG_TYPE_INFO, "keyboard initialized\n" );
-}
+#endif

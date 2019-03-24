@@ -106,6 +106,11 @@ _start:
 	*/
 	mov $stack_top, %esp
  
+    /*
+    initialize the fpu
+    */
+    fninit
+    
     /* 
     Call the global constructors
     */
