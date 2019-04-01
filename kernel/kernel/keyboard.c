@@ -32,17 +32,24 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "input_event_codes.h"
+
 #include "kernel/baseIO.h"
 #include "kernel/intr.h"
 #include "kernel/log.h"
 #include "arch/vga.h"
 
+
+//#define LOG_CMD 1
+//#define LOG_INTR_HANDLER 1
+//#define LOG_KEYCODE 1
+//#define LOG_SC2 1
+
 #define KBD_STATE_INITIAL 0
 #define KBD_STATE_E0 1
-#define KBD_STATE_E0_F0 2
-#define KBD_STATE_E1 3
-#define KBD_STATE_E1_14 4
-#define KBD_STATE_F0 5
+#define KBD_STATE_E1 2
+#define KBD_STATE_F0 4
+#define KBD_STATE_14 8
 
 #define KBD_CMD_NODATA 0xff
 
@@ -55,32 +62,178 @@ int keyboard_state;
 uint8_t resend_counter;
 bool sending;
 
+unsigned char keypressed_map[KEY_CNT >> 3];  // 8 bit per char
+
+// max scan code 0x83
+const unsigned char sc2_initial[132] = {
+    KEY_RESERVED,
+    KEY_F9,
+    KEY_RESERVED,
+    KEY_F5,
+    KEY_F3,
+    KEY_F1,
+    KEY_F2,
+    KEY_F12,
+    KEY_RESERVED,
+    KEY_F10,
+    KEY_F8,
+    KEY_F6,
+    KEY_F4,
+    KEY_TAB,
+    KEY_APOSTROPHE,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_LEFTALT,
+    KEY_LEFTSHIFT,
+    KEY_RESERVED,
+    KEY_LEFTCTRL,
+    KEY_Q,
+    KEY_1,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_Z,
+    KEY_S,
+    KEY_A,
+    KEY_W,
+    KEY_2,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_C,
+    KEY_X,
+    KEY_D,
+    KEY_E,
+    KEY_4,
+    KEY_3,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_SPACE,
+    KEY_V,
+    KEY_F,
+    KEY_T,
+    KEY_R,
+    KEY_5,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_N,
+    KEY_B,
+    KEY_H,
+    KEY_G,
+    KEY_Y,
+    KEY_6,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_M,
+    KEY_J,
+    KEY_U,
+    KEY_7,
+    KEY_8,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_COMMA,
+    KEY_K,
+    KEY_I,
+    KEY_O,
+    KEY_0,
+    KEY_9,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_DOT,
+    KEY_SLASH,
+    KEY_L,
+    KEY_SEMICOLON,
+    KEY_P, 
+    KEY_MINUS,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_APOSTROPHE,
+    KEY_RESERVED,
+    KEY_LEFTMETA,
+    KEY_EQUAL,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_CAPSLOCK,
+    KEY_RIGHTSHIFT,
+    KEY_ENTER,
+    KEY_RIGHTMETA,
+    KEY_RESERVED,
+    KEY_BACKSLASH,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_BACKSPACE,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_KP1,
+    KEY_RESERVED,
+    KEY_KP4,
+    KEY_KP7,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_KP0,
+    KEY_KPDOT,
+    KEY_KP2,
+    KEY_KP5,
+    KEY_KP6,
+    KEY_KP8,
+    KEY_ESC,
+    KEY_NUMLOCK,
+    KEY_F11,
+    KEY_KPPLUS,
+    KEY_KP3,
+    KEY_KPMINUS,
+    KEY_KPASTERISK,
+    KEY_KP9,
+    KEY_SCROLLLOCK,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_RESERVED,
+    KEY_F7,
+    
+    } ;
 
 void keyboard_send_command() {
     if (buffer_pos == 0 || sending) return;
-    while (inb(0x64) & (0x1 << 1) == 0); // wait for buffer to clear   
-    while (inb(0x64) & (0x2 << 1) == 0); // wait for reset mode 
+    while ( (inb(0x64) & (0x1 << 1)) == 0); // wait for buffer to clear   
+    while ( (inb(0x64) & (0x2 << 1)) == 0); // wait for reset mode 
 
+    #ifdef LOG_CMD
     logf(LOG_TYPE_VERBOSE, "%s: send 0x%x to port 0x60\n", __func__, keyboard_cmd_buffer[0]);
+    #endif
     outb(0x60, keyboard_cmd_buffer[0]);
     if(keyboard_cmd_data_buffer[0]!= KBD_CMD_NODATA ) {
         io_wait();            
+        #ifdef LOG_CMD
         logf(LOG_TYPE_VERBOSE, "%s: send 0x%x to port 0x60\n", __func__, keyboard_cmd_data_buffer[0]);
+        #endif
         outb(0x60, keyboard_cmd_data_buffer[0]);   
     }             
 }
 
 void keyboard_queue_command(unsigned char cmd, unsigned char data) {        
     if (buffer_pos < KBD_QUEUE_LENGTH) {
+        #ifdef LOG_CMD
         logf(LOG_TYPE_VERBOSE, "%s: queue 0x%x with data 0x%x at pos %d\n", __func__, cmd, data, buffer_pos );
+        #endif
         keyboard_cmd_buffer[buffer_pos] = cmd;
         keyboard_cmd_data_buffer[buffer_pos]=data;
         buffer_pos++;
         // trigger new send if queue was empty
         keyboard_send_command();        
-    } else
+    }  
+        #ifdef LOG_CMD
+        else      
         logf( LOG_TYPE_INFO, "%s:, queue was full", __func__);
-    
+        #endif
 }
     
 void keyboard_send_next_command() {
@@ -92,35 +245,75 @@ void keyboard_send_next_command() {
     keyboard_send_command();
 }
 
-void keyboard_translate_sc2(unsigned char scancode) {
-    switch (keyboard_state) {
-    case KBD_STATE_INITIAL:
+inline void keyboard_setpressed (const unsigned char keycode, bool pressed) {
+    const uint8_t pos = keycode >> 3;
+    if (!keycode) 
+        return;  // dont't do anything on keycode 0
+    if (pressed) {        
+        #ifdef LOG_KEYCODE
+        logf( LOG_TYPE_VERBOSE, "keycode %x pressed\n", keycode );
+        #endif
+        keypressed_map[pos] |= 0x1 << (keycode && 0x7);
+    }
+    else {
+        #ifdef LOG_KEYCODE
+        logf( LOG_TYPE_VERBOSE, "keycode %x released\n", keycode );
+        #endif
+        keypressed_map[pos] &= ~(0x1 << (keycode && 0x7));        
+    }
+}
+
+
+void keyboard_translate_sc2(const unsigned char scancode) {
+    bool is_break = false;
+    int keycode;
+
+    // if we got a f0 before this is a break code
+    if (keyboard_state == KBD_STATE_F0)
+        is_break = true;
+    
+    #ifdef LOG_SC2
+        logf( LOG_TYPE_VERBOSE, "%s: state=0x%x, code=%x\n", __func__, keyboard_state, scancode);            
+    #endif
+    
+    if ( !(keyboard_state & (KBD_STATE_E0 | KBD_STATE_E1)  ) )
+    {
         switch(scancode) {
         case 0xe0:            
-            keyboard_state = KBD_STATE_E0;
+            keyboard_state |= KBD_STATE_E0;
             break;
         case 0xe1:
-            keyboard_state = KBD_STATE_E1;
+            keyboard_state |= KBD_STATE_E1;
             break;
         case 0xf0:
-            keyboard_state = KBD_STATE_F0;
+            keyboard_state |= KBD_STATE_F0;
             break;
-        case 0x3A:
-            terminal_putchar("M");
-            break;
-        default:
+        default:         
+            #ifdef LOG_SC2
+            logf( LOG_TYPE_VERBOSE, "scancode 0x%x, break 0x%x\n", scancode, is_break);
+            #endif
+            // get keycode
+            if (scancode <= 0x83 )
+                keycode =  sc2_initial[scancode];
+            else
+                keycode = 0;
+            keyboard_setpressed(keycode, !is_break);
+            
+            if (is_break)
+                keyboard_state = KBD_STATE_INITIAL;
             break;
         }        
     }
 }
 
 void keyboard_intr_handler() {
-//    log ( LOG_TYPE_INFO, "kbd\n");
     
     while (inb(0x64) & 0x1 ) {
         io_wait();
         uint8_t code = inb(0x60);
+        #ifdef LOG_INTR_HANDLER
         logf(LOG_TYPE_VERBOSE, "%s: received 0x%x\n", __func__, code);
+        #endif
         switch (code) {
         case 0xFA: // send next command            
             sending = false;
@@ -133,6 +326,7 @@ void keyboard_intr_handler() {
                 keyboard_send_command();
             break;            
         default:
+            keyboard_translate_sc2(code);
         break;
         }
     }
@@ -166,9 +360,11 @@ void keyboard_init() {
     // clear command buffer
     memset (keyboard_cmd_buffer, 0, sizeof(keyboard_cmd_buffer));
     memset (keyboard_cmd_data_buffer, KBD_CMD_NODATA, sizeof(keyboard_cmd_buffer));
+    memset (keypressed_map, 0, sizeof(keypressed_map));    
     
+
     resend_counter = 0;
-    keyboard_state = 0;
+    keyboard_state = KBD_STATE_INITIAL;
     sending = false;
 
     kbc_disable_translation();
@@ -189,8 +385,5 @@ void keyboard_init() {
     // check scancode set 2
     keyboard_queue_command(0xf0, KBD_CMD_NODATA);
     keyboard_queue_command(0x00, KBD_CMD_NODATA);
-
-    //logf( LOG_TYPE_INFO, "keyboard scancode is %d\n", scan_code);
-
 }
 

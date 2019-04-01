@@ -46,4 +46,8 @@ enum LOG_TYPE {
 void log(int level, const char* msg);
 void logf(int level, const char* format, ...);
 
+// silent log, (no screen output)
+void logs(int level, const char* msg);
+void logfs(int level, const char* format, ...);
+
 #endif
